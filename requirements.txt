@@ -2,3 +2,5 @@ fastapi>=0.115
 uvicorn>=0.34
 httpx>=0.28
 pytest>=8.3
+scikit-learn>=1.8,<2
+joblib>=1.4

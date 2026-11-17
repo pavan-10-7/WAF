@@ -1,4 +1,4 @@
-"""Comprehensive Integration and Unit Tests for WAF Reverse Proxy."""
+"""Comprehensive Integration and Unit Tests for WAF Reverse Proxy with Member 2 Detector."""
 
 import json
 from pathlib import Path
@@ -47,13 +47,14 @@ def mock_upstream():
 
 @pytest.fixture
 def test_app_and_client(temp_event_log: Path, mock_upstream):
-    """Creates a configured TestClient with mocked upstream and isolated logger."""
+    """Creates a configured TestClient with mocked upstream, Member 2 detector, and isolated logger."""
     app = create_app()
 
     mock_transport = httpx.MockTransport(mock_upstream.handle_request)
     mock_http_client = httpx.AsyncClient(transport=mock_transport)
 
     test_logger = EventLogger(log_path=str(temp_event_log))
+    # Uses Member 2's detector by default
     test_adapter = DetectionAdapter()
 
     proxy = WAFReverseProxy(
@@ -86,7 +87,7 @@ def test_legitimate_request_forwarded_get(test_app_and_client):
     client, upstream, log_file = test_app_and_client
     upstream.response_body = b"<h1>Welcome to DVWA</h1>"
 
-    resp = client.get("/vulnerabilities/sqli/?id=1&Submit=Submit", headers={"User-Agent": "Mozilla/5.0"})
+    resp = client.get("/products?category=electronics&page=1", headers={"User-Agent": "Mozilla/5.0"})
 
     assert resp.status_code == 200
     assert resp.text == "<h1>Welcome to DVWA</h1>"
@@ -95,32 +96,31 @@ def test_legitimate_request_forwarded_get(test_app_and_client):
     # Verify upstream request attributes
     fwd_req = upstream.calls[0]
     assert fwd_req.method == "GET"
-    assert fwd_req.url.path == "/vulnerabilities/sqli/"
-    assert fwd_req.url.query.decode() == "id=1&Submit=Submit"
+    assert fwd_req.url.path == "/products"
+    assert fwd_req.url.query.decode() == "category=electronics&page=1"
     assert fwd_req.headers.get("x-forwarded-for") is not None
 
 
 def test_legitimate_request_forwarded_post(test_app_and_client):
-    """Preserve request body and headers across POST/PUT forwarding."""
+    """Preserve request body and headers across POST forwarding."""
     client, upstream, _ = test_app_and_client
     upstream.response_body = b'{"status":"created"}'
     upstream.response_headers = {"content-type": "application/json"}
 
-    resp = client.post("/api/data", content=b"user=alice&action=login", headers={"Content-Type": "application/x-www-form-urlencoded"})
+    resp = client.post("/api/items", content=b"item=book&quantity=2", headers={"Content-Type": "application/x-www-form-urlencoded"})
 
     assert resp.status_code == 200
     assert len(upstream.calls) == 1
     fwd_req = upstream.calls[0]
     assert fwd_req.method == "POST"
-    assert fwd_req.content == b"user=alice&action=login"
+    assert fwd_req.content == b"item=book&quantity=2"
 
 
-def test_blocked_request_returns_403(test_app_and_client):
-    """3 & 4. Malicious request blocked with HTTP 403 and NEVER reaches upstream."""
+def test_blocked_sqli_returns_403(test_app_and_client):
+    """3 & 4. SQL injection attack is blocked with HTTP 403 and NEVER reaches upstream."""
     client, upstream, log_file = test_app_and_client
 
-    # Send SQL injection in query string
-    resp = client.get("/vulnerabilities/sqli/?id=1%27%20OR%20%271%27=%271&Submit=Submit")
+    resp = client.get("/search?id=1%20OR%201=1")
 
     assert resp.status_code == 403
     data = resp.json()
@@ -128,6 +128,68 @@ def test_blocked_request_returns_403(test_app_and_client):
     assert data["attack_type"] == "sqli"
 
     # Upstream must NEVER be contacted
+    assert len(upstream.calls) == 0
+
+
+def test_blocked_xss_returns_403(test_app_and_client):
+    """XSS attack is blocked with HTTP 403 and NEVER reaches upstream."""
+    client, upstream, log_file = test_app_and_client
+
+    resp = client.post("/comment", content=b"<script>alert(1)</script>")
+
+    assert resp.status_code == 403
+    data = resp.json()
+    assert "Forbidden" in data["detail"]
+    assert data["attack_type"] == "xss"
+
+    # Upstream must NEVER be contacted
+    assert len(upstream.calls) == 0
+
+
+def test_blocked_traversal_returns_403(test_app_and_client):
+    """Path traversal attack is blocked with HTTP 403 and NEVER reaches upstream."""
+    client, upstream, log_file = test_app_and_client
+
+    resp = client.get("/file?name=%2e%2e%2fetc/passwd")
+
+    assert resp.status_code == 403
+    data = resp.json()
+    assert "Forbidden" in data["detail"]
+    assert data["attack_type"] == "traversal"
+
+    # Upstream must NEVER be contacted
+    assert len(upstream.calls) == 0
+
+
+def test_detector_failure_fails_closed_with_503(test_app_and_client):
+    """Detector execution failure returns HTTP 503 and never forwards to upstream."""
+    client, upstream, log_file = test_app_and_client
+
+    # Swap in a failing detector
+    client.app.state.proxy.adapter.set_detector(lambda req: 1 / 0)
+
+    resp = client.get("/anything")
+    assert resp.status_code == 503
+    assert "503 Service Unavailable" in resp.json()["detail"]
+    assert len(upstream.calls) == 0
+
+    # Verify event was logged as blocked
+    lines = log_file.read_text(encoding="utf-8").strip().split("\n")
+    assert len(lines) == 1
+    rec = json.loads(lines[0])
+    assert rec["verdict"] == "block"
+
+
+def test_detector_invalid_output_fails_closed_with_503(test_app_and_client):
+    """Invalid detector output format returns HTTP 503 and never forwards to upstream."""
+    client, upstream, log_file = test_app_and_client
+
+    # Swap in a detector returning invalid dict
+    client.app.state.proxy.adapter.set_detector(lambda req: {"verdict": "pass", "attack_type": "none"})
+
+    resp = client.get("/anything")
+    assert resp.status_code == 503
+    assert "503 Service Unavailable" in resp.json()["detail"]
     assert len(upstream.calls) == 0
 
 
@@ -159,7 +221,7 @@ def test_events_written_with_exact_schema(test_app_and_client):
     client.get("/index.php?page=home")
 
     # 2. Blocked SQLi request
-    client.post("/login.php", content=b"user=admin'--&pass=secret")
+    client.post("/login.php", content=b"user=admin'-- &pass=secret")
 
     # 3. Blocked XSS request
     client.get("/search?q=<script>alert(1)</script>")

@@ -1,21 +1,33 @@
 """Detection Adapter for WAF.
 
 Provides a decoupled integration layer between the reverse proxy and the detection engine.
-Validates detection outputs against the project contract:
-- verdict: 'block' | 'allow'
-- attack_type: 'sqli' | 'xss' | 'traversal' | 'none'
-- score: float in [0.0, 1.0]
-- reason: str
+Uses Member 2's hybrid detection engine directly:
+    from detector import detect
 
-Fails safely: Any detector exception, invalid payload, or contract violation
-results in a safe 'block' verdict rather than silently allowing traffic.
+Validates detection outputs against the project contract:
+- result is a dictionary
+- verdict is 'block' or 'allow'
+- attack_type is 'sqli', 'xss', 'traversal', or 'none'
+- score is numeric and between 0.0 and 1.0
+- reason is a string
+
+Fail-closed policy:
+Detector exceptions or invalid outputs raise DetectionContractError so the proxy
+can return an appropriate HTTP 503 response and prevent uninspected traffic from passing.
 """
 
 import inspect
 import logging
+from pathlib import Path
+import sys
 from typing import Any, Callable, Dict, Optional
 
-from app.detection_stub import detect as default_detect_stub
+# Ensure repository root is in sys.path so 'from detector import detect' always succeeds
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from detector import detect
 
 logger = logging.getLogger("waf.detection_adapter")
 
@@ -24,7 +36,7 @@ VALID_ATTACK_TYPES = {"sqli", "xss", "traversal", "none"}
 
 
 class DetectionContractError(Exception):
-    """Raised when detection engine returns non-compliant results."""
+    """Raised when detection engine returns non-compliant results or fails execution."""
     pass
 
 
@@ -32,10 +44,10 @@ class DetectionAdapter:
     """Manages detection function execution, output validation, and safe failure handling."""
 
     def __init__(self, detector_fn: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None):
-        self._detector: Callable[[Dict[str, Any]], Dict[str, Any]] = detector_fn or default_detect_stub
+        self._detector: Callable[[Dict[str, Any]], Dict[str, Any]] = detector_fn or detect
 
     def set_detector(self, detector_fn: Callable[[Dict[str, Any]], Dict[str, Any]]) -> None:
-        """Allows Member 2's ML detection function to be injected without modifying proxy code."""
+        """Allows switching or mocking detection function for testing."""
         self._detector = detector_fn
 
     def get_detector(self) -> Callable[[Dict[str, Any]], Dict[str, Any]]:
@@ -70,27 +82,19 @@ class DetectionAdapter:
         }
 
     async def detect(self, req: Dict[str, Any]) -> Dict[str, Any]:
-        """Executes the detector function (synchronous or async) and enforces fail-safe validation."""
+        """Executes the detector function (synchronous or async) and enforces validation."""
         try:
             detector = self._detector
             if inspect.iscoroutinefunction(detector):
                 raw_result = await detector(req)
             else:
                 raw_result = detector(req)
-
-            validated = self._validate_response(raw_result)
-            return validated
-
         except Exception as exc:
-            # Fail-safe security policy: on any detection failure, block the request
-            logger.error("Detection failure encountered: %s. Enforcing safe block.", exc)
-            return {
-                "verdict": "block",
-                "attack_type": "none",
-                "score": 1.0,
-                "reason": f"Safe block: detector execution failed ({exc.__class__.__name__})",
-            }
+            logger.error("Detector raised an exception during execution: %s", exc)
+            raise DetectionContractError(f"Detector execution failed: {exc}") from exc
+
+        return self._validate_response(raw_result)
 
 
-# Global adapter instance for the application
+# Global adapter instance for the application using Member 2's detector
 default_adapter = DetectionAdapter()

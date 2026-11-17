@@ -13,7 +13,7 @@ from fastapi import Request, Response
 import httpx
 
 from app.config import UPSTREAM_TIMEOUT, UPSTREAM_URL
-from app.detection_adapter import DetectionAdapter, default_adapter
+from app.detection_adapter import DetectionAdapter, DetectionContractError, default_adapter
 from app.event_logger import EventLogger, default_event_logger
 
 logger = logging.getLogger("waf.proxy")
@@ -108,12 +108,33 @@ class WAFReverseProxy:
             "headers": dict(request.headers),
         }
 
-        # 1. Execute detection with fail-safe adapter
-        detection_result = await self.adapter.detect(req_contract)
-        verdict = detection_result.get("verdict", "block")
-        attack_type = detection_result.get("attack_type", "none")
-        score = detection_result.get("score", 0.0)
-        reason = detection_result.get("reason", "")
+        # 1. Execute detection with fail-closed adapter
+        try:
+            detection_result = await self.adapter.detect(req_contract)
+            verdict = detection_result.get("verdict", "block")
+            attack_type = detection_result.get("attack_type", "none")
+            score = detection_result.get("score", 0.0)
+            reason = detection_result.get("reason", "")
+        except DetectionContractError as exc:
+            logger.error(
+                "Detection failed or produced invalid output: %s. Failing closed with HTTP 503.", exc
+            )
+            extracted_payload = self.event_logger.extract_payload(body_str, query_str)
+            event_record = self.event_logger.create_event_record(
+                ip=client_ip,
+                method=method,
+                path=path_str,
+                payload=extracted_payload,
+                verdict="block",
+                attack_type="none",
+                score=1.0,
+            )
+            await self.event_logger.log_event(event_record)
+            return Response(
+                content='{"detail":"503 Service Unavailable: Detection service failure"}',
+                status_code=503,
+                media_type="application/json",
+            )
 
         # 2. Extract payload strictly following policy: body > query > ""
         extracted_payload = self.event_logger.extract_payload(body_str, query_str)
