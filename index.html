@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hybrid AI WAF · SOC Console</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">🛡️ HYBRID AI WAF <span>SOC Console</span></div>
+      <div class="actions">
+        <span id="status" class="pill pill-wait">● CHECKING…</span>
+        <button id="reload" type="button">⟳ Reload</button>
+        <a id="open" href="http://localhost:8501" target="_blank" rel="noopener">Open in new tab ↗</a>
+      </div>
+    </header>
+
+    <main>
+      <iframe id="frame" title="Hybrid AI WAF dashboard" hidden></iframe>
+
+      <section id="offline" class="offline" hidden>
+        <h1>Dashboard is not running</h1>
+        <p>Start the Streamlit app in another terminal, then this page connects automatically:</p>
+        <pre>pip install -r requirements.txt
+streamlit run dashboard.py</pre>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

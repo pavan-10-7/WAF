@@ -1,6 +1,19 @@
+# WAF backend
 fastapi>=0.115
 uvicorn>=0.34
 httpx>=0.28
-pytest>=8.3
+
+# Hybrid detection engine
 scikit-learn>=1.8,<2
 joblib>=1.4
+
+# Vulnerability dashboard
+streamlit>=1.37
+pandas>=2.0
+numpy>=1.24
+plotly>=5.18
+
+# Testing and HTTP utilities
+pytest>=8.3
+requests>=2.32.0
+beautifulsoup4>=4.12.0
