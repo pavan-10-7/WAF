@@ -1,0 +1,5 @@
+{"ts": "2026-11-17T10:01:00", "ip": "127.0.0.1", "method": "GET", "path": "/vulnerabilities/sqli/", "payload": "id=1' OR '1'='1", "verdict": "block", "attack_type": "sqli", "score": 0.98}
+{"ts": "2026-11-17T10:01:15", "ip": "127.0.0.1", "method": "GET", "path": "/vulnerabilities/sqli/", "payload": "id=1 UNION SELECT user,password FROM users", "verdict": "block", "attack_type": "sqli", "score": 0.99}
+{"ts": "2026-11-17T10:02:00", "ip": "127.0.0.1", "method": "GET", "path": "/vulnerabilities/xss_r/", "payload": "name=<script>alert(1)</script>", "verdict": "block", "attack_type": "xss", "score": 0.95}
+{"ts": "2026-11-17T10:02:30", "ip": "127.0.0.1", "method": "GET", "path": "/vulnerabilities/fi/", "payload": "page=../../../../etc/passwd", "verdict": "block", "attack_type": "traversal", "score": 0.96}
+{"ts": "2026-11-17T10:03:00", "ip": "127.0.0.1", "method": "GET", "path": "/vulnerabilities/sqli/", "payload": "id=2", "verdict": "allow", "attack_type": "none", "score": 0.02}
