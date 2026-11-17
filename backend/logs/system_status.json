@@ -1,0 +1,17 @@
+{
+    "last_updated": "2026-11-17T10:08:39.323752+00:00",
+    "waf_status": "ok",
+    "detection_engine": "ONLINE",
+    "ml_model": "LOADED",
+    "components": {
+        "reverse_proxy": "ok",
+        "detection_adapter": "ONLINE",
+        "hybrid_detector": "ONLINE",
+        "ml_model": "LOADED"
+    },
+    "model": {
+        "algorithm": "Hybrid Rule-Based + ML Classifier",
+        "model_path": "C:\\Users\\Pavan\\Documents\\RNSIT\\SEM-V\\WAF\\models\\detector.joblib",
+        "training_status": "LOADED"
+    }
+}

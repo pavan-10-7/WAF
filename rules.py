@@ -11,6 +11,7 @@ RULES: dict[str, tuple[re.Pattern[str], ...]] = {
     "sqli": (
         re.compile(r"\b(?:union\s+(?:all\s+)?select|select\b.{0,80}\bfrom\b)", re.I),
         re.compile(r"(?:'|%27|\b)\s*(?:or|and)\s+(?:'[^']*'\s*=\s*'[^']*'|\d+\s*=\s*\d+)", re.I),
+        re.compile(r"""['"]\s*(?:or|and)\s+['"]?\d+['"]?\s*=\s*['"]?\d+['"]?""", re.I),
         re.compile(r"\b(?:sleep|benchmark)\s*\(", re.I),
         re.compile(r"(?:--|#)\s*(?:$|\s)|/\*.*?\*/", re.I),
     ),

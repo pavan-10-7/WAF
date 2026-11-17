@@ -16,12 +16,19 @@ _model: Any = None
 _model_loaded = False
 
 
+
 def _request_text(req: dict) -> str:
-    parts = [str(req.get(key, "") or "") for key in ("method", "path", "query", "body")]
-    headers = req.get("headers", {})
-    if isinstance(headers, dict):
-        parts.extend(f"{key}: {value}" for key, value in headers.items())
+    """Build detection input from request data, excluding transport metadata.
+
+    HTTP headers contain browser and proxy metadata that can cause false
+    positives. Inspect the method, path, query and body instead.
+    """
+    parts = [
+        str(req.get(key, "") or "")
+        for key in ("method", "path", "query", "body")
+    ]
     return normalize(" ".join(parts))
+
 
 
 def _load_model() -> Any:

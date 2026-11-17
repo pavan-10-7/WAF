@@ -6,12 +6,12 @@ ENDPOINT = "/vulnerabilities/xss_r/"
 
 
 def run_xss_test():
-    print("\n[XSS] Starting local XSS test")
+    print("\n[XSS] Starting local XSS detection test")
 
     session = create_session()
 
-    # Harmless marker for testing reflected input handling.
-    payload = "WAF_XSS_TEST_MARKER"
+    # Harmless XSS-pattern test string for WAF detection.
+    payload = "<script>alert('WAF_TEST')</script>"
 
     params = {
         "name": payload,
@@ -24,11 +24,12 @@ def run_xss_test():
         params=params
     )
 
-    display_result("XSS Reflection Test", response)
+    display_result("XSS Detection Test", response)
 
-    reflected = payload in response.text
-
-    print(f"Marker reflected: {reflected}")
+    if response.status_code == 403:
+        print("[PASS] WAF blocked the XSS test payload")
+    else:
+        print("[FAIL] WAF did not block the XSS test payload")
 
     session.close()
 

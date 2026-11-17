@@ -42,7 +42,7 @@ def correlate_finding_events(
         if event_type == "none" or event_type != target_type:
             continue
 
-        event_path = str(event.get("path", "/"))
+        event_path = str(event.get("path") or event.get("endpoint") or "/")
         if not endpoints_match(target_endpoint, event_path):
             continue
 

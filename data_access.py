@@ -35,37 +35,104 @@ EVENT_ALIASES = {
     "verdict": ["verdict", "action", "decision"],
     "score": ["score", "detection_score", "confidence", "probability"],
 }
+
 TRIAGE_ALIASES = {
-    "vuln_id": ["vuln_id", "id", "vulnerability_id"],
-    "title": ["title", "name", "vulnerability"],
-    "endpoint": ["endpoint", "path", "url"],
-    "attack_type": ["attack_type", "attack", "category"],
-    "cvss": ["cvss", "cvss_score"],
-    "asset_criticality": ["asset_criticality", "criticality"],
-    "observed_attacks": ["observed_attacks", "attack_count", "observed"],
-    "risk_score": ["risk_score", "risk"],
-    "priority": ["priority", "severity"],
-    "virtual_patch": ["virtual_patch", "suggested_patch", "patch"],
+    "vuln_id": [
+        "vuln_id",
+        "finding_id",
+        "id",
+        "vulnerability_id",
+    ],
+    "title": [
+        "title",
+        "name",
+        "vulnerability",
+    ],
+    "endpoint": [
+        "endpoint",
+        "path",
+        "url",
+    ],
+    "attack_type": [
+        "attack_type",
+        "attack",
+        "category",
+    ],
+    "cvss": [
+        "cvss",
+        "cvss_score",
+    ],
+    "asset_criticality": [
+        "asset_criticality",
+        "criticality",
+    ],
+    "observed_attacks": [
+        "observed_attacks",
+        "observed_attack_count",
+        "attack_count",
+        "observed",
+    ],
+    "risk_score": [
+        "risk_score",
+        "risk",
+    ],
+    "priority": [
+        "priority",
+        "severity",
+    ],
+    "virtual_patch": [
+        "virtual_patch",
+        "suggested_virtual_patch",
+        "suggested_patch",
+        "patch",
+    ],
 }
+
 ATTACK_MAP = {
     "sqli": "SQL Injection", "sql_injection": "SQL Injection",
     "xss": "XSS", "cross_site_scripting": "XSS",
     "path_traversal": "Path Traversal", "directory_traversal": "Path Traversal",
     "lfi": "Path Traversal",
+    "traversal": "Path Traversal",
 }
 NO_ATTACK = {"", "none", "benign", "normal", "clean", "null", "nan"}
 
 
 # ------------------------------------------------------------------ locating
+
 def data_source() -> tuple[Path, bool]:
-    """Return (folder, is_sample)."""
+    """Return (data_folder, is_sample).
+
+    Priority:
+    1. WAF_DATA_DIR environment variable
+    2. Project's backend/logs directory
+    3. Project's data directory
+    4. Project's samples directory
+    """
     env = os.getenv("WAF_DATA_DIR")
+
     if env:
-        return Path(env), False
+        folder = Path(env)
+        if not folder.is_absolute():
+            folder = BASE_DIR / folder
+        folder = folder.resolve()
+
+        if folder.exists():
+            return folder, False
+
+    backend_logs = BASE_DIR / "backend" / "logs"
+    if backend_logs.exists() and (
+        (backend_logs / "events.jsonl").exists()
+        or (backend_logs / "events.json").exists()
+    ):
+        return backend_logs, False
+
     data = BASE_DIR / "data"
     if (data / "events.jsonl").exists() or (data / "events.json").exists():
         return data, False
+
     return BASE_DIR / "samples", True
+
 
 
 def _read_records(path: Path) -> tuple[list[dict], dict]:

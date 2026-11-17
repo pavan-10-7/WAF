@@ -1,0 +1,54 @@
+[
+  {
+    "finding_id": 1,
+    "title": "SQL Injection in User Lookup",
+    "endpoint": "/vulnerabilities/sqli/",
+    "attack_type": "sqli",
+    "cvss": 9.8,
+    "asset_criticality": "high",
+    "observed_attack_count": 2,
+    "blocked_attack_count": 2,
+    "risk_score": 8.08,
+    "priority": "HIGH",
+    "suggested_virtual_patch": "Enforce strict WAF regex/ML blocking on '/vulnerabilities/sqli/' for SQL meta-characters (', \", --, ;, UNION, SELECT, OR 1=1) across query and body parameters; apply parameterised queries in application code. [Active Threat: 2 matching attack event(s) observed in WAF logs.]"
+  },
+  {
+    "finding_id": 3,
+    "title": "Local File Inclusion / Path Traversal",
+    "endpoint": "/vulnerabilities/fi/",
+    "attack_type": "traversal",
+    "cvss": 8.6,
+    "asset_criticality": "high",
+    "observed_attack_count": 3,
+    "blocked_attack_count": 3,
+    "risk_score": 7.55,
+    "priority": "HIGH",
+    "suggested_virtual_patch": "Block path traversal sequences (../, ..\\, %2e%2e%2f, /etc/passwd, win.ini) on '/vulnerabilities/fi/' at the WAF proxy and restrict file access to an allowlisted base directory. [Active Threat: 3 matching attack event(s) observed in WAF logs.]"
+  },
+  {
+    "finding_id": 4,
+    "title": "Stored Cross-Site Scripting in Guestbook",
+    "endpoint": "/vulnerabilities/xss_s/",
+    "attack_type": "xss",
+    "cvss": 7.4,
+    "asset_criticality": "high",
+    "observed_attack_count": 0,
+    "blocked_attack_count": 0,
+    "risk_score": 6.26,
+    "priority": "MEDIUM",
+    "suggested_virtual_patch": "Enable WAF payload inspection on '/vulnerabilities/xss_s/' to block HTML/JS injection vectors (<script>, onerror=, onload=, javascript:) and enforce Content-Security-Policy and output HTML encoding. [Proactive Hardening: 0 active attacks observed so far.]"
+  },
+  {
+    "finding_id": 2,
+    "title": "Reflected Cross-Site Scripting (XSS)",
+    "endpoint": "/vulnerabilities/xss_r/",
+    "attack_type": "xss",
+    "cvss": 6.1,
+    "asset_criticality": "medium",
+    "observed_attack_count": 2,
+    "blocked_attack_count": 2,
+    "risk_score": 5.7,
+    "priority": "MEDIUM",
+    "suggested_virtual_patch": "Enable WAF payload inspection on '/vulnerabilities/xss_r/' to block HTML/JS injection vectors (<script>, onerror=, onload=, javascript:) and enforce Content-Security-Policy and output HTML encoding. [Active Threat: 2 matching attack event(s) observed in WAF logs.]"
+  }
+]
