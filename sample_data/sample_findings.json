@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "title": "SQL Injection in User Lookup",
+    "endpoint": "/vulnerabilities/sqli/",
+    "type": "sqli",
+    "cvss": 9.8,
+    "asset_criticality": "high"
+  },
+  {
+    "id": 2,
+    "title": "Reflected Cross-Site Scripting (XSS)",
+    "endpoint": "/vulnerabilities/xss_r/",
+    "type": "xss",
+    "cvss": 6.1,
+    "asset_criticality": "medium"
+  },
+  {
+    "id": 3,
+    "title": "Local File Inclusion / Path Traversal",
+    "endpoint": "/vulnerabilities/fi/",
+    "type": "traversal",
+    "cvss": 8.6,
+    "asset_criticality": "high"
+  },
+  {
+    "id": 4,
+    "title": "Stored Cross-Site Scripting in Guestbook",
+    "endpoint": "/vulnerabilities/xss_s/",
+    "type": "xss",
+    "cvss": 7.4,
+    "asset_criticality": "high"
+  }
+]

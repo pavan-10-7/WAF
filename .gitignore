@@ -1,6 +1,36 @@
+# Python virtual environments
 .venv/
+venv/
+env/
+**/.venv/
+**/venv/
+
+# Python cache
 __pycache__/
 *.py[cod]
-*$py.class
 .pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
+
+# Node.js
+node_modules/
+npm-debug.log*
+dist/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
